@@ -1,5 +1,3 @@
-# Football Analysis Project
-
 ## Project Overview
 This project is a comprehensive football analytics system that uses computer vision and machine learning to analyze football matches. It provides real-time tracking of players, ball possession analysis, and tactical insights through various AI-powered modules.
 
@@ -31,13 +29,15 @@ git clone https://github.com/yourusername/football-analysis.git
 cd football-analysis
 ```
 
-2. Install required packages:
+2. Install required packages given below using:
 ```bash
-pip install -r requirements.txt
+pip install --package-name
 ```
 
-3. Download pre-trained models:
-- Download [Trained YOLOv5 Model](https://drive.google.com/file/d/1DC2kCygbBWUKheQ_9cFziCsYVSRw6axK/view?usp=sharing)
+3. Train custom models using Roboflow:
+- Custom training notebooks are available in `training/`:
+- `football_player_detection_training.ipynb`
+- `football-court-keypoint.ipynb`
 - Place in `models/` directory
 
 ## Project Structure
@@ -91,11 +91,3 @@ python main.py --input input_videos/your_video.mp4 --output output_videos/result
 - numpy>=1.24.0
 - matplotlib>=3.7.0
 - pandas>=2.0.0
-
-## Training
-Custom training notebooks are available in `training/`:
-- `football_player_detection_training.ipynb`
-- `football-court-keypoint.ipynb`
-
-## License
-This project is licensed under the MIT License - see the LICENSE file for details.
