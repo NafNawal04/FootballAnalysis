@@ -5,3 +5,6 @@ __pycache__/
 *.pt
 *.avi
 *.pkl
+
+output_videos/
+input_videos/
