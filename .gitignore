@@ -8,3 +8,4 @@ __pycache__/
 
 output_videos/
 input_videos/
+rfdetr_config.py
