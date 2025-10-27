@@ -1,4 +1,3 @@
-from ultralytics import YOLO
 import supervision as sv
 import pickle
 import os
@@ -8,10 +7,20 @@ import cv2
 import sys 
 sys.path.append('../')
 from utils import get_center_of_bbox, get_bbox_width, get_foot_position
+from detectors.rfdetr_seg_detector import RFDETRSegDetector
 
 class Tracker:
-    def __init__(self, model_path):
-        self.model = YOLO(model_path) 
+    def __init__(self, api_key, workspace, project, version):
+        """
+        Initialize tracker with RFDETR-SEG model.
+        
+        Args:
+            api_key: Roboflow API key for RFDETR-SEG
+            workspace: Roboflow workspace name
+            project: Roboflow project name  
+            version: Model version number
+        """
+        self.detector = RFDETRSegDetector(api_key, workspace, project, version)
         self.tracker = sv.ByteTrack()
 
     def add_position_to_tracks(sekf,tracks):
@@ -38,11 +47,13 @@ class Tracker:
         return ball_positions
 
     def detect_frames(self, frames):
-        batch_size=20 
-        detections = [] 
-        for i in range(0,len(frames),batch_size):
-            detections_batch = self.model.predict(frames[i:i+batch_size],conf=0.1)
-            detections += detections_batch
+        # Use RFDETR-SEG detector
+        batch_size = 20
+        detections = []
+        for i in range(0, len(frames), batch_size):
+            batch_frames = frames[i:i+batch_size]
+            predictions = self.detector.predict_frames_batch(batch_frames, confidence=0.1)
+            detections += predictions
         return detections
 
     def get_object_tracks(self, frames, read_from_stub=False, stub_path=None):
@@ -56,37 +67,45 @@ class Tracker:
 
         tracks={
             "players":[],
-            "ball":[]
+            "ball":[],
+            "referees":[]
         }
 
         for frame_num, detection in enumerate(detections):
-            cls_names = detection.names
-            cls_names_inv = {v:k for k,v in cls_names.items()}
-
-            # Convert supervision Detection format
-            detection_supervision = sv.Detections.from_ultralytics(detection)
-
+            # Handle RFDETR-SEG format
+            # Convert to supervision format
+            detection_supervision = self.detector.convert_to_supervision_format(detection)
+            
+            # Get class names from detector
+            cls_names_inv = self.detector.class_names_inv
 
             # Track Objects
             detection_with_tracks = self.tracker.update_with_detections(detection_supervision)
 
             tracks["players"].append({})
             tracks["ball"].append({})
+            tracks["referees"].append({})
 
+            # Process tracked detections (players and goalkeepers)
             for frame_detection in detection_with_tracks:
                 bbox = frame_detection[0].tolist()
                 cls_id = frame_detection[3]
                 track_id = frame_detection[4]
 
-                if cls_id == cls_names_inv['player']:
-                    tracks["players"][frame_num][track_id] = {"bbox": bbox}
+                # Check if it's a player or goalkeeper (both are considered players for tracking)
+                if cls_id in [cls_names_inv.get('player', 2), cls_names_inv.get('goalkeeper', 1)]:
+                    tracks["players"][frame_num][track_id] = {"bbox": bbox, "class_id": cls_id}
+                # Check if it's a referee
+                elif cls_id == cls_names_inv.get('referee', 3):
+                    tracks["referees"][frame_num][track_id] = {"bbox": bbox, "class_id": cls_id}
 
+            # Process untracked detections (ball)
             for frame_detection in detection_supervision:
                 bbox = frame_detection[0].tolist()
                 cls_id = frame_detection[3]
 
-                if cls_id == cls_names_inv['ball']:
-                    tracks["ball"][frame_num][1] = {"bbox":bbox}
+                if cls_id == cls_names_inv.get('ball', 0):
+                    tracks["ball"][frame_num][1] = {"bbox": bbox}
 
         if stub_path is not None:
             with open(stub_path,'wb') as f:
@@ -220,19 +239,51 @@ class Tracker:
 
             player_dict = tracks["players"][frame_num]
             ball_dict = tracks["ball"][frame_num]
+            referee_dict = tracks["referees"][frame_num]
 
-            # Draw Players
+            # Draw Players and Goalkeepers
             for track_id, player in player_dict.items():
-                # Get team color for the player
-                team_color = player.get("team_color", (255, 0, 0))
-                if isinstance(team_color, np.ndarray):
-                    color = tuple(map(int, team_color))
-                else:
-                    color = team_color
-                frame = self.draw_ellipse(frame, player["bbox"], color, track_id)
+                class_id = player.get("class_id", 2)  # Default to player
                 
+                # Determine color based on class
+                if class_id == 1:  # Goalkeeper
+                    color = (0, 0, 0)  # Black for goalkeeper
+                else:  # Regular player
+                    # Get team color for the player
+                    team_color = player.get("team_color", (255, 0, 0))
+                    if isinstance(team_color, np.ndarray):
+                        color = tuple(map(int, team_color))
+                    else:
+                        color = team_color
+                
+                frame = self.draw_ellipse(frame, player["bbox"], color, track_id)
+                # Inside draw_annotations, after drawing ellipse:
+                if 'pass_accuracy' in player:
+                    accuracy = player.get('pass_accuracy', 0)
+                    # Draw accuracy below player ID
+                    accuracy_text = f"{accuracy:.0f}%"
+                    x_center, _ = get_center_of_bbox(player["bbox"])
+                    y_pos = int(player["bbox"][3]) + 35
+                    
+                    # Draw background rectangle for text
+                    text_size = cv2.getTextSize(accuracy_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
+                    cv2.rectangle(frame, 
+                                (x_center - text_size[0]//2 - 2, y_pos - 12),
+                                (x_center + text_size[0]//2 + 2, y_pos + 2),
+                                (255, 255, 255), -1)
+                    
+                    cv2.putText(frame, accuracy_text,
+                                (x_center - text_size[0]//2, y_pos),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+                                
+
                 if player.get('has_ball', False):
                     frame = self.draw_traingle(frame, player["bbox"], (0, 0, 255))
+            
+            # Draw Referees
+            for track_id, referee in referee_dict.items():
+                color = (0, 255, 255)  # Yellow for referee
+                frame = self.draw_ellipse(frame, referee["bbox"], color, track_id)
             
             # Draw ball 
             for track_id, ball in ball_dict.items():
