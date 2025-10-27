@@ -409,6 +409,30 @@ class PassInterceptionDrawer:
             interceptions_till_frame
         )
 
+        # After existing team stats, add pass accuracy
+        if hasattr(self, 'pass_accuracy_stats'):
+            team1_accuracy = []
+            team2_accuracy = []
+            
+            for player_id, stats in self.pass_accuracy_stats.items():
+                if player_id in player_assignment[frame_num]:
+                    team = player_assignment[frame_num][player_id]
+                    if team == 1:
+                        team1_accuracy.append(stats['accuracy'])
+                    else:
+                        team2_accuracy.append(stats['accuracy'])
+            
+            avg_team1 = np.mean(team1_accuracy) if team1_accuracy else 0
+            avg_team2 = np.mean(team2_accuracy) if team2_accuracy else 0
+            
+            # Draw below existing stats
+            cv2.putText(frame, f"Pass Accuracy: {avg_team1:.1f}%",
+                        (text_x, text_y1 + 20), cv2.FONT_HERSHEY_SIMPLEX,
+                        font_scale * 0.8, (0,0,0), font_thickness)
+            cv2.putText(frame, f"Pass Accuracy: {avg_team2:.1f}%",
+                        (text_x, text_y2 + 20), cv2.FONT_HERSHEY_SIMPLEX,
+                        font_scale * 0.8, (0,0,0), font_thickness)
+        
         cv2.putText(
             frame, 
             f"Team 1 (White) - Passes: {team1_passes} Interceptions: {team1_interceptions}",
@@ -461,6 +485,15 @@ class PassInterceptionDrawer:
         # Use maximum speeds
         avg_pass_speed = self.max_pass_speed
         avg_interception_speed = self.max_interception_speed
+        
+        # TEMPORARY: Show test values to verify display works
+        # Remove this once we confirm the display is working
+        if frame_num > 100:  # After 100 frames, show test values
+            avg_pass_length = 12.5
+            avg_interception_length = 8.3
+            avg_pass_speed = 15.2
+            avg_interception_speed = 11.7
+        
         
         # For distances, we'll use a simple calculation
         avg_pass_distance = avg_pass_speed * 0.2  # Approximate distance based on speed
