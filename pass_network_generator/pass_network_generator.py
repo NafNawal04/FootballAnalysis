@@ -142,7 +142,7 @@ class PassNetworkGenerator:
             
             # Draw connection line
             thickness = max(1, int((pass_count / max_passes) * 5))
-            color = (255, 255, 255) if team_id == 1 else (144, 238, 144)
+            color = (255, 255, 255) if team_id == 1 else (0, 0, 255)
             cv2.line(img, 
                     (int(pos1[0]), int(pos1[1])),
                     (int(pos2[0]), int(pos2[1])),
@@ -158,7 +158,7 @@ class PassNetworkGenerator:
         for player_id, pos in player_positions.items():
             # Draw player circle
             cv2.circle(img, (int(pos[0]), int(pos[1])), 8,
-                      (255, 255, 255) if team_id == 1 else (144, 238, 144), -1)
+                      (255, 255, 255) if team_id == 1 else (0, 0, 255), -1)
             cv2.circle(img, (int(pos[0]), int(pos[1])), 8, (0, 0, 0), 1)
             
             # Draw player number
@@ -184,7 +184,7 @@ class PassNetworkGenerator:
         # Add labels
         cv2.putText(comparison, "Team 1 (White)", (10, 20),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(comparison, "Team 2 (Green)", (self.tactical_width+20, 20),
+        cv2.putText(comparison, "Team 2 (Red)", (self.tactical_width+20, 20),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
         return comparison, team_networks

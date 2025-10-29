@@ -5,13 +5,13 @@ class TeamAssigner:
     def __init__(self):
         # Define reference team colors as tuples (RGB format for color comparison)
         self.TEAM_WHITE = (255, 255, 255)  # White team
-        self.TEAM_MINT = (144, 238, 144)   # Mint green team
+        self.TEAM_RED = (0, 0, 255)        # Red team
         self.ORANGE = (255, 165, 0)        # Orange color (RGB)
         self.BLACK = (0, 0, 0)             # Black color (RGB)
         self.player_team_dict = {}
         self.team_colors = {
             1: self.TEAM_WHITE,  # White team
-            2: self.TEAM_MINT    # Mint team
+            2: self.TEAM_RED     # Red team
         }
 
     def get_clustering_model(self,image):
@@ -75,13 +75,13 @@ class TeamAssigner:
         elif black_distance < 100:
             return 1  # White team
         
-        # 3. If no white but orange color detected → Mint team
+        # 3. If no white but orange color detected → Red team
         elif orange_distance < 100:
-            return 2  # Mint team
+            return 2  # Red team
         
-        # 4. All other players → Mint team
+        # 4. All other players → Red team
         else:
-            return 2  # Mint team
+            return 2  # Red team
 
     def assign_team_color(self, frame, player_detections):
         print("\nDetecting player colors and assigning teams:")

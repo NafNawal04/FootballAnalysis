@@ -10,7 +10,7 @@ class GoalDrawer:
         self.goal_flash_duration = 48  # Show "GOAL!" for 3 seconds at 24fps
         self.team_colors = {
             1: (255, 255, 255),  # White team
-            2: (144, 238, 144)   # Mint team
+            2: (0, 0, 255)       # Red team
         }
     
     def draw_goal_flash(self, frame, goal_team, frames_since_goal):

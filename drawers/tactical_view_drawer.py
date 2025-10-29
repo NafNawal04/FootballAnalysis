@@ -1,11 +1,11 @@
 import cv2 
 
 class TacticalViewDrawer:
-    def __init__(self, team_1_color=[255, 255, 255], team_2_color=[144, 238, 144]):
+    def __init__(self, team_1_color=[255, 255, 255], team_2_color=[0, 0, 255]):
         self.start_x = 20
         self.start_y = 80
         self.team_1_color = team_1_color  # White team
-        self.team_2_color = team_2_color  # Mint team
+        self.team_2_color = team_2_color  # Red team
 
     def draw(self, 
              video_frames, 

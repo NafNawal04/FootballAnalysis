@@ -25,7 +25,7 @@ from config.rfdetr_config import RFDETR_CONFIG
 def main():
     
     # Read Video
-    video_frames = read_video('input_videos/08fd33_4.mp4')
+    video_frames = read_video('input_videos/0bfacc_1.mp4')
 
     # Initialize Enhanced Tracker with SAM2 (if available)
     # You can provide SAM2 checkpoint path if available
@@ -122,7 +122,7 @@ def main():
                                     tracks['players'][0])
     
     # Add debug dictionary to collect team assignments
-    team_assignments = {1: [], 2: []}  # Only 2 teams: white and mint
+    team_assignments = {1: [], 2: []}  # Only 2 teams: white and red
     
     for frame_num, player_track in enumerate(tracks['players']):
         for player_id, track in player_track.items():
@@ -138,7 +138,7 @@ def main():
     
     print("\nFinal Team Assignments:")
     print(f"Team 1 (White): Players: {sorted(team_assignments[1])}")
-    print(f"Team 2 (Mint): Players: {sorted(team_assignments[2])}")
+    print(f"Team 2 (Red): Players: {sorted(team_assignments[2])}")
     
     # Detect Ball Acquisition using improved algorithm
     ball_acquisition_detector = ImprovedBallAcquisitionDetector()

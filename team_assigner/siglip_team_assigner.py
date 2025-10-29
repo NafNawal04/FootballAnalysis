@@ -53,7 +53,7 @@ class SigLIPTeamAssigner:
         # Team colors for visualization
         self.team_colors = {
             1: (255, 255, 255),  # White team
-            2: (144, 238, 144)   # Light green team
+            2: (0, 0, 255)       # Red team
         }
         
         if CLIP_AVAILABLE:

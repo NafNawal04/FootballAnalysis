@@ -445,7 +445,7 @@ class PassInterceptionDrawer:
         
         cv2.putText(
             frame, 
-            f"Team 2 (Green) - Passes: {team2_passes} Interceptions: {team2_interceptions}",
+            f"Team 2 (Red) - Passes: {team2_passes} Interceptions: {team2_interceptions}",
             (text_x, text_y2), 
             cv2.FONT_HERSHEY_SIMPLEX, 
             font_scale, 

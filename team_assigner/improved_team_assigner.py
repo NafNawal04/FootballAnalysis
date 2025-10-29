@@ -7,7 +7,7 @@ class ImprovedTeamAssigner:
     def __init__(self):
         # Define reference team colors in BGR format (OpenCV uses BGR)
         self.TEAM_WHITE = (255, 255, 255)  # White team
-        self.TEAM_LIGHT_GREEN = (144, 238, 144)  # Light green team
+        self.TEAM_RED = (0, 0, 255)        # Red team
         self.TEAM_DARK_GREEN = (0, 100, 0)  # Dark green team
         
         # Color tolerance for matching
@@ -93,15 +93,15 @@ class ImprovedTeamAssigner:
         
         # Calculate similarity to reference colors
         white_similarity = self.calculate_color_similarity(player_color, self.TEAM_WHITE)
-        light_green_similarity = self.calculate_color_similarity(player_color, self.TEAM_LIGHT_GREEN)
+        red_similarity = self.calculate_color_similarity(player_color, self.TEAM_RED)
         
         # Check if color is close to white (more lenient threshold)
         if white_similarity < self.COLOR_TOLERANCE * 1.5:  # More lenient
             return 1  # White team
         
-        # Check if color is close to light green
-        elif light_green_similarity < self.COLOR_TOLERANCE:
-            return 2  # Light green team
+        # Check if color is close to red
+        elif red_similarity < self.COLOR_TOLERANCE:
+            return 2  # Red team
         
         # If we have team samples, use them for comparison
         if len(self.team_color_samples[1]) > 0 and len(self.team_color_samples[2]) > 0:
