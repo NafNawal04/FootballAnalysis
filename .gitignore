@@ -3,9 +3,9 @@
 
 __pycache__/
 *.pt
-# *.avi
+*.avi
 *.pkl
 
-# output_videos/
-# input_videos/
-# rfdetr_config.py
+output_videos/
+input_videos/
+rfdetr_config.py
