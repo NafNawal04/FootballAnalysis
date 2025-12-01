@@ -155,6 +155,95 @@ class MatchAnalyzer:
             seconds = off_ball_runs[team] / self.fps
             report.append(f"Team {team}: {seconds:.1f} seconds of high-intensity off-ball movement")
 
+        # 4. PER-PLAYER DETAILED ANALYSIS
+        report.append("\n4. PER-PLAYER DETAILED ANALYSIS")
+        report.append("================================")
+        
+        # Calculate per-player zone distribution
+        player_zones = {}
+        player_off_ball_runs = {}
+        player_possession_frames = {}
+        
+        for frame_num, frame_tracks in enumerate(self.tracks['players']):
+            ball_holder = self.ball_acquisition[frame_num] if frame_num < len(self.ball_acquisition) else -1
+            
+            for player_id, track in frame_tracks.items():
+                if player_id not in player_zones:
+                    player_zones[player_id] = {'Defensive': 0, 'Midfield': 0, 'Attacking': 0, 'total': 0}
+                    player_off_ball_runs[player_id] = 0
+                    player_possession_frames[player_id] = 0
+                
+                team = track.get('team', -1)
+                if team not in [1, 2]: continue
+                
+                # Zone tracking
+                pos = track.get('position_transformed')
+                if pos is not None:
+                    x = pos[0]
+                    third = self.pitch_width / 3
+                    
+                    if team == 1:
+                        if x < third: zone_type = 'Defensive'
+                        elif x < 2 * third: zone_type = 'Midfield'
+                        else: zone_type = 'Attacking'
+                    else:
+                        if x > 2 * third: zone_type = 'Defensive'
+                        elif x > third: zone_type = 'Midfield'
+                        else: zone_type = 'Attacking'
+                    
+                    player_zones[player_id][zone_type] += 1
+                    player_zones[player_id]['total'] += 1
+                
+                # Off-ball runs
+                speed = track.get('speed', 0)
+                if speed is None: speed = 0
+                if speed > high_speed_threshold and player_id != ball_holder:
+                    player_off_ball_runs[player_id] += 1
+                
+                # Possession tracking
+                if player_id == ball_holder:
+                    player_possession_frames[player_id] += 1
+        
+        # Sort players by team and then by distance
+        team_1_players = [(pid, stats) for pid, stats in player_final_stats.items() if stats['team'] == 1]
+        team_2_players = [(pid, stats) for pid, stats in player_final_stats.items() if stats['team'] == 2]
+        
+        team_1_players.sort(key=lambda x: x[1]['distance'], reverse=True)
+        team_2_players.sort(key=lambda x: x[1]['distance'], reverse=True)
+        
+        for team_id, team_players in [(1, team_1_players), (2, team_2_players)]:
+            report.append(f"\n--- TEAM {team_id} PLAYERS ---")
+            
+            for player_id, stats in team_players:
+                report.append(f"\nPlayer {player_id}:")
+                
+                # Distance
+                distance = stats['distance']
+                report.append(f"  Distance Covered: {distance:.2f} m")
+                
+                # Average Speed
+                if stats['count'] > 0:
+                    avg_speed = stats['speed_sum'] / stats['count']
+                    report.append(f"  Average Speed: {avg_speed:.2f} m/s ({avg_speed * 3.6:.2f} km/h)")
+                
+                # Zone Distribution
+                if player_id in player_zones and player_zones[player_id]['total'] > 0:
+                    zones = player_zones[player_id]
+                    report.append(f"  Zone Distribution:")
+                    for zone in ['Defensive', 'Midfield', 'Attacking']:
+                        pct = (zones[zone] / zones['total']) * 100
+                        report.append(f"    {zone}: {pct:.1f}%")
+                
+                # Possession Time
+                if player_id in player_possession_frames:
+                    possession_seconds = player_possession_frames[player_id] / self.fps
+                    report.append(f"  Ball Possession: {possession_seconds:.1f} seconds ({player_possession_frames[player_id]} frames)")
+                
+                # Off-ball runs
+                if player_id in player_off_ball_runs:
+                    off_ball_seconds = player_off_ball_runs[player_id] / self.fps
+                    report.append(f"  High-Intensity Off-Ball Movement: {off_ball_seconds:.1f} seconds")
+
         return "\n".join(report)
 
     def save_report(self, filename="match_analysis_report.txt"):

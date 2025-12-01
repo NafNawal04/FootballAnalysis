@@ -49,13 +49,13 @@ class TacticalViewDrawer:
             overlay = frame[y1:y2, x1:x2].copy()
             cv2.addWeighted(court_image, alpha, overlay, 1 - alpha, 0, frame[y1:y2, x1:x2])
             
-            # Draw court keypoints
-            for keypoint_index, keypoint in enumerate(tactical_court_keypoints):
-                x, y = keypoint
-                x += self.start_x
-                y += self.start_y
-                cv2.circle(frame, (x, y), 5, (0, 0, 255), -1)
-                cv2.putText(frame, str(keypoint_index), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+            # Draw court keypoints (DISABLED - obscures player dots)
+            # for keypoint_index, keypoint in enumerate(tactical_court_keypoints):
+            #     x, y = keypoint
+            #     x += self.start_x
+            #     y += self.start_y
+            #     cv2.circle(frame, (x, y), 5, (0, 0, 255), -1)
+            #     cv2.putText(frame, str(keypoint_index), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
             
             # Draw player positions in tactical view if available
             if tactical_player_positions and player_assignment and frame_idx < len(tactical_player_positions):

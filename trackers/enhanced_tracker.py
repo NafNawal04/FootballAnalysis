@@ -101,6 +101,7 @@ class EnhancedTracker:
         
         # Save to stub if requested
         if stub_path is not None:
+            os.makedirs(os.path.dirname(stub_path), exist_ok=True)
             with open(stub_path, 'wb') as f:
                 pickle.dump(tracks, f)
         

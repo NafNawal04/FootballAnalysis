@@ -74,6 +74,7 @@ class CameraMovementEstimator():
             old_gray = frame_gray.copy()
         
         if stub_path is not None:
+            os.makedirs(os.path.dirname(stub_path), exist_ok=True)
             with open(stub_path,'wb') as f:
                 pickle.dump(camera_movement,f)
 
