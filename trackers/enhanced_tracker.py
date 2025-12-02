@@ -239,7 +239,7 @@ class EnhancedTracker:
         return frame
     
     def draw_annotations(self, video_frames: List[np.ndarray], tracks: Dict, 
-                        team_ball_control: np.ndarray) -> List[np.ndarray]:
+                        team_ball_control: np.ndarray, goalkeeper_saves: List[Dict] = None) -> List[np.ndarray]:
         """Draw annotations on video frames."""
         output_video_frames = []
         
@@ -288,6 +288,43 @@ class EnhancedTracker:
                 # Draw ball possession indicator
                 if player.get('has_ball', False):
                     frame = self.draw_triangle(frame, player["bbox"], (0, 0, 255))
+                    
+                    # Draw SAVE! annotation if goalkeeper has the ball
+                    if class_id == 1 and goalkeeper_saves is not None:
+                        # Check if this frame has a save event for this goalkeeper
+                        for save in goalkeeper_saves:
+                            if save['frame_num'] == frame_num and save['goalkeeper_id'] == track_id:
+                                # Draw "SAVE!" text above the goalkeeper
+                                x_center, _ = get_center_of_bbox(player["bbox"])
+                                y_pos = int(player["bbox"][1]) - 20  # Above the player
+                                
+                                save_text = "SAVE!"
+                                font = cv2.FONT_HERSHEY_BOLD
+                                font_scale = 1.0
+                                thickness = 2
+                                
+                                # Get text size for background
+                                text_size = cv2.getTextSize(save_text, font, font_scale, thickness)[0]
+                                
+                                # Draw bright yellow background rectangle
+                                padding = 8
+                                cv2.rectangle(frame,
+                                            (x_center - text_size[0]//2 - padding, y_pos - text_size[1] - padding),
+                                            (x_center + text_size[0]//2 + padding, y_pos + padding),
+                                            (0, 255, 255), -1)  # Bright yellow
+                                
+                                # Draw black border
+                                cv2.rectangle(frame,
+                                            (x_center - text_size[0]//2 - padding, y_pos - text_size[1] - padding),
+                                            (x_center + text_size[0]//2 + padding, y_pos + padding),
+                                            (0, 0, 0), 2)
+                                
+                                # Draw text in red
+                                cv2.putText(frame, save_text,
+                                          (x_center - text_size[0]//2, y_pos),
+                                          font, font_scale, (0, 0, 255), thickness)
+                                break
+
             
             # Draw Referees
             for track_id, referee in referee_dict.items():

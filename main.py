@@ -19,6 +19,7 @@ from tactical_view_converter import TacticalViewConverter
 from drawers.tactical_view_drawer import TacticalViewDrawer
 from heatmap_generator import HeatmapGenerator
 from goal_detector import GoalDetector
+from goal_detector.goalkeeper_save_detector import GoalkeeperSaveDetector
 from drawers.goal_drawer import GoalDrawer
 from pass_network_generator import PassNetworkGenerator
 from config.rfdetr_config import RFDETR_CONFIG
@@ -161,6 +162,21 @@ def main():
         possession_stats = ball_acquisition_detector.get_possession_statistics(ball_acquisition, player_assignment)
         print(f"\nBall Possession Statistics:")
         print(f"  - Frames with possession: {possession_stats['possession_frames']}/{possession_stats['total_frames']} ({possession_stats['possession_percentage']:.1f}%)")
+        
+        # Goalkeeper Saves Detection
+        print("\nDetecting Goalkeeper Saves...")
+        goalkeeper_save_detector = GoalkeeperSaveDetector()
+        goalkeeper_saves = goalkeeper_save_detector.detect_saves(tracks['players'], ball_acquisition)
+        save_stats = goalkeeper_save_detector.get_save_statistics(goalkeeper_saves, player_assignment)
+        
+        print(f"\nGoalkeeper Save Statistics:")
+        print(f"  - Total save frames: {save_stats['total_saves']}")
+        print(f"  - Saves by Team 1: {save_stats['saves_by_team'][1]}")
+        print(f"  - Saves by Team 2: {save_stats['saves_by_team'][2]}")
+        if save_stats['saves_by_goalkeeper']:
+            print(f"  - Saves by Goalkeeper:")
+            for gk_id, count in save_stats['saves_by_goalkeeper'].items():
+                print(f"    - Goalkeeper {gk_id}: {count} frames")
 
     # Goals
     goals = []
@@ -268,7 +284,8 @@ def main():
     print("Drawing output video...")
     
     # Basic Tracks
-    output_video_frames = tracker.draw_annotations(video_frames, tracks, team_ball_control if args.possession else None)
+    goalkeeper_saves = goalkeeper_save_detector.save_events if args.possession and 'goalkeeper_save_detector' in locals() else None
+    output_video_frames = tracker.draw_annotations(video_frames, tracks, team_ball_control if args.possession else None, goalkeeper_saves)
     
     # Camera Movement
     output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames, camera_movement_per_frame)
