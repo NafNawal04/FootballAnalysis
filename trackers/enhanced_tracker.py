@@ -242,99 +242,115 @@ class EnhancedTracker:
                         team_ball_control: np.ndarray, goalkeeper_saves: List[Dict] = None) -> List[np.ndarray]:
         """Draw annotations on video frames."""
         output_video_frames = []
+        total_frames = len(video_frames)
+        
+        print(f"Processing {total_frames} frames for annotation...")
         
         for frame_num, frame in enumerate(video_frames):
-            frame = frame.copy()
-            
-            player_dict = tracks["players"][frame_num]
-            ball_dict = tracks["ball"][frame_num]
-            referee_dict = tracks["referees"][frame_num]
-            
-            # Draw Players and Goalkeepers
-            for track_id, player in player_dict.items():
-                class_id = player.get("class_id", 2)  # Default to player
+            try:
+                # Progress indicator
+                if frame_num % 100 == 0:
+                    print(f"  Processing frame {frame_num}/{total_frames}...")
                 
-                # Determine color based on class
-                if class_id == 1:  # Goalkeeper
-                    color = (0, 0, 0)  # Black for goalkeeper
-                else:  # Regular player
-                    # Get team color for the player
-                    team_color = player.get("team_color", (255, 0, 0))
-                    if isinstance(team_color, np.ndarray):
-                        color = tuple(map(int, team_color))
-                    else:
-                        color = team_color
+                frame = frame.copy()
                 
-                frame = self.draw_ellipse(frame, player["bbox"], color, track_id)
+                player_dict = tracks["players"][frame_num]
+                ball_dict = tracks["ball"][frame_num]
+                referee_dict = tracks["referees"][frame_num]
                 
-                # Draw pass accuracy if available
-                if 'pass_accuracy' in player:
-                    accuracy = player.get('pass_accuracy', 0)
-                    accuracy_text = f"{accuracy:.0f}%"
-                    x_center, _ = get_center_of_bbox(player["bbox"])
-                    y_pos = int(player["bbox"][3]) + 35
+                # Draw Players and Goalkeepers
+                for track_id, player in player_dict.items():
+                    class_id = player.get("class_id", 2)  # Default to player
                     
-                    # Draw background rectangle for text
-                    text_size = cv2.getTextSize(accuracy_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
-                    cv2.rectangle(frame, 
-                                (x_center - text_size[0]//2 - 2, y_pos - 12),
-                                (x_center + text_size[0]//2 + 2, y_pos + 2),
-                                (255, 255, 255), -1)
+                    # Determine color based on class
+                    if class_id == 1:  # Goalkeeper
+                        color = (0, 0, 0)  # Black for goalkeeper
+                    else:  # Regular player
+                        # Get team color for the player
+                        team_color = player.get("team_color", (255, 0, 0))
+                        if isinstance(team_color, np.ndarray):
+                            color = tuple(map(int, team_color))
+                        else:
+                            color = team_color
                     
-                    cv2.putText(frame, accuracy_text,
-                                (x_center - text_size[0]//2, y_pos),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-                
-                # Draw ball possession indicator
-                if player.get('has_ball', False):
-                    frame = self.draw_triangle(frame, player["bbox"], (0, 0, 255))
+                    frame = self.draw_ellipse(frame, player["bbox"], color, track_id)
                     
-                    # Draw SAVE! annotation if goalkeeper has the ball
-                    if class_id == 1 and goalkeeper_saves is not None:
-                        # Check if this frame has a save event for this goalkeeper
-                        for save in goalkeeper_saves:
-                            if save['frame_num'] == frame_num and save['goalkeeper_id'] == track_id:
-                                # Draw "SAVE!" text above the goalkeeper
-                                x_center, _ = get_center_of_bbox(player["bbox"])
-                                y_pos = int(player["bbox"][1]) - 20  # Above the player
-                                
-                                save_text = "SAVE!"
-                                font = cv2.FONT_HERSHEY_BOLD
-                                font_scale = 1.0
-                                thickness = 2
-                                
-                                # Get text size for background
-                                text_size = cv2.getTextSize(save_text, font, font_scale, thickness)[0]
-                                
-                                # Draw bright yellow background rectangle
-                                padding = 8
-                                cv2.rectangle(frame,
-                                            (x_center - text_size[0]//2 - padding, y_pos - text_size[1] - padding),
-                                            (x_center + text_size[0]//2 + padding, y_pos + padding),
-                                            (0, 255, 255), -1)  # Bright yellow
-                                
-                                # Draw black border
-                                cv2.rectangle(frame,
-                                            (x_center - text_size[0]//2 - padding, y_pos - text_size[1] - padding),
-                                            (x_center + text_size[0]//2 + padding, y_pos + padding),
-                                            (0, 0, 0), 2)
-                                
-                                # Draw text in red
-                                cv2.putText(frame, save_text,
-                                          (x_center - text_size[0]//2, y_pos),
-                                          font, font_scale, (0, 0, 255), thickness)
-                                break
+                    # Draw pass accuracy if available
+                    if 'pass_accuracy' in player:
+                        accuracy = player.get('pass_accuracy', 0)
+                        accuracy_text = f"{accuracy:.0f}%"
+                        x_center, _ = get_center_of_bbox(player["bbox"])
+                        y_pos = int(player["bbox"][3]) + 35
+                        
+                        # Draw background rectangle for text
+                        text_size = cv2.getTextSize(accuracy_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
+                        cv2.rectangle(frame, 
+                                    (x_center - text_size[0]//2 - 2, y_pos - 12),
+                                    (x_center + text_size[0]//2 + 2, y_pos + 2),
+                                    (255, 255, 255), -1)
+                        
+                        cv2.putText(frame, accuracy_text,
+                                    (x_center - text_size[0]//2, y_pos),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+                    
+                    # Draw ball possession indicator
+                    if player.get('has_ball', False):
+                        frame = self.draw_triangle(frame, player["bbox"], (0, 0, 255))
+                        
+                        # Draw SAVE! annotation if goalkeeper has the ball
+                        if class_id == 1 and goalkeeper_saves is not None:
+                            # Check if this frame has a save event for this goalkeeper
+                            for save in goalkeeper_saves:
+                                if save['frame_num'] == frame_num and save['goalkeeper_id'] == track_id:
+                                    # Draw "SAVE!" text above the goalkeeper
+                                    x_center, _ = get_center_of_bbox(player["bbox"])
+                                    y_pos = int(player["bbox"][1]) - 20  # Above the player
+                                    
+                                    save_text = "SAVE!"
+                                    font = cv2.FONT_HERSHEY_SIMPLEX
+                                    font_scale = 1.0
+                                    thickness = 2
+                                    
+                                    # Get text size for background
+                                    text_size = cv2.getTextSize(save_text, font, font_scale, thickness)[0]
+                                    
+                                    # Draw bright yellow background rectangle
+                                    padding = 8
+                                    cv2.rectangle(frame,
+                                                (x_center - text_size[0]//2 - padding, y_pos - text_size[1] - padding),
+                                                (x_center + text_size[0]//2 + padding, y_pos + padding),
+                                                (0, 255, 255), -1)  # Bright yellow
+                                    
+                                    # Draw black border
+                                    cv2.rectangle(frame,
+                                                (x_center - text_size[0]//2 - padding, y_pos - text_size[1] - padding),
+                                                (x_center + text_size[0]//2 + padding, y_pos + padding),
+                                                (0, 0, 0), 2)
+                                    
+                                    # Draw text in red
+                                    cv2.putText(frame, save_text,
+                                              (x_center - text_size[0]//2, y_pos),
+                                              font, font_scale, (0, 0, 255), thickness)
+                                    break
 
-            
-            # Draw Referees
-            for track_id, referee in referee_dict.items():
-                color = (0, 255, 255)  # Yellow for referee
-                frame = self.draw_ellipse(frame, referee["bbox"], color, track_id)
-            
-            # Draw ball
-            for track_id, ball in ball_dict.items():
-                frame = self.draw_triangle(frame, ball["bbox"], (0, 255, 0))
-            
-            output_video_frames.append(frame)
+                
+                # Draw Referees
+                for track_id, referee in referee_dict.items():
+                    color = (0, 255, 255)  # Yellow for referee
+                    frame = self.draw_ellipse(frame, referee["bbox"], color, track_id)
+                
+                # Draw ball
+                for track_id, ball in ball_dict.items():
+                    frame = self.draw_triangle(frame, ball["bbox"], (0, 255, 0))
+                
+                output_video_frames.append(frame)
+                
+            except Exception as e:
+                print(f"Error processing frame {frame_num}: {e}")
+                import traceback
+                traceback.print_exc()
+                # Append the original frame without annotations to continue processing
+                output_video_frames.append(frame.copy())
         
+        print(f"Completed processing all {total_frames} frames.")
         return output_video_frames

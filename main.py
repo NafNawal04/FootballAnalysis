@@ -36,6 +36,7 @@ def main():
     parser.add_argument('--passing', action='store_true', help='Enable Pass and Interception detection')
     parser.add_argument('--network', action='store_true', help='Enable Pass Network generation')
     parser.add_argument('--tactical', action='store_true', help='Enable Tactical View')
+    parser.add_argument('--camera', action='store_true', help='Enable Camera Movement overlay')
     parser.add_argument('--analysis', action='store_true', help='Enable Match Analysis Report')
     parser.add_argument('--all', action='store_true', help='Enable ALL features')
     
@@ -43,7 +44,7 @@ def main():
     
     # Handle dependencies
     if args.all:
-        args.speed = args.heatmap = args.goals = args.possession = args.passing = args.network = args.tactical = args.analysis = True
+        args.speed = args.heatmap = args.goals = args.possession = args.passing = args.network = args.tactical = args.camera = args.analysis = True
 
     # Passing and Network imply Possession, which implies Team Assignment
     if args.network: args.passing = True
@@ -136,6 +137,7 @@ def main():
     ball_acquisition = []
     team_ball_control = []
     ball_acquisition_detector = None
+    goalkeeper_saves = None
     
     if args.possession:
         print("Running Ball Acquisition Detector...")
@@ -284,11 +286,26 @@ def main():
     print("Drawing output video...")
     
     # Basic Tracks
-    goalkeeper_saves = goalkeeper_save_detector.save_events if args.possession and 'goalkeeper_save_detector' in locals() else None
-    output_video_frames = tracker.draw_annotations(video_frames, tracks, team_ball_control if args.possession else None, goalkeeper_saves)
+    try:
+        output_video_frames = tracker.draw_annotations(video_frames, tracks, team_ball_control if args.possession else None, goalkeeper_saves)
+        print("✓ Completed drawing annotations")
+    except Exception as e:
+        print(f"✗ Error drawing annotations: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
     
     # Camera Movement
-    output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames, camera_movement_per_frame)
+    if args.camera:
+        try:
+            print("Drawing camera movement...")
+            output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames, camera_movement_per_frame)
+            print("✓ Completed drawing camera movement")
+        except Exception as e:
+            print(f"✗ Error drawing camera movement: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
     
     # Speed
     if args.speed and speed_and_distance_estimator:
@@ -318,7 +335,17 @@ def main():
                                                        player_assignment,
                                                        ball_acquisition)
                                                        
-    save_video(output_video_frames, 'output_videos/output_video.avi')
+    # Save video
+    try:
+        print("Saving output video...")
+        save_video(output_video_frames, 'output_videos/output_video.avi')
+        print("✓ Video saved successfully")
+    except Exception as e:
+        print(f"✗ Error saving video: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+    
     print("Done!")
 
 if __name__ == '__main__':
