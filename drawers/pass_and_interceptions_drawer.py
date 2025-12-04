@@ -336,7 +336,7 @@ class PassInterceptionDrawer:
         self.processed_passes.clear()
         self.processed_interceptions.clear()
 
-    def draw(self, video_frames, passes, interceptions, ball_acquisition=None, player_assignment=None, tracks=None):
+    def draw(self, video_frames, passes, interceptions, ball_acquisition=None, player_assignment=None, tracks=None, final_third_passes=None):
         """
         Draw pass and interception statistics on a list of video frames.
 
@@ -349,6 +349,7 @@ class PassInterceptionDrawer:
             ball_acquisition (list, optional): List of ball acquisition events for advanced calculations.
             player_assignment (list, optional): List of player team assignments for advanced calculations.
             tracks (dict, optional): Tracks data for advanced calculations.
+            final_third_passes (list, optional): List indicating final third passes per frame.
 
         Returns:
             list: A list of frames with pass and interception statistics drawn on them.
@@ -359,11 +360,11 @@ class PassInterceptionDrawer:
                 continue
             
             frame_drawn = self.draw_frame(frame, frame_num, passes, interceptions, 
-                                        ball_acquisition, player_assignment, tracks)
+                                        ball_acquisition, player_assignment, tracks, final_third_passes)
             output_video_frames.append(frame_drawn)
         return output_video_frames
     
-    def draw_frame(self, frame, frame_num, passes, interceptions, ball_acquisition=None, player_assignment=None, tracks=None):
+    def draw_frame(self, frame, frame_num, passes, interceptions, ball_acquisition=None, player_assignment=None, tracks=None, final_third_passes=None):
         """
         Draw a semi-transparent overlay of pass and interception statistics on a single frame.
 
@@ -375,6 +376,7 @@ class PassInterceptionDrawer:
             ball_acquisition (list, optional): List of ball acquisition events for advanced calculations.
             player_assignment (list, optional): List of player team assignments for advanced calculations.
             tracks (dict, optional): Tracks data for advanced calculations.
+            final_third_passes (list, optional): List indicating final third passes per frame.
 
         Returns:
             numpy.ndarray: The frame with the semi-transparent overlay and statistics.
@@ -452,6 +454,40 @@ class PassInterceptionDrawer:
             (0,0,0), 
             font_thickness
         )
+        
+        # Draw final third pass indicator if this frame has one
+        if final_third_passes is not None and frame_num < len(final_third_passes):
+            if final_third_passes[frame_num] != -1:
+                # Draw a bright green "FINAL THIRD PASS" label
+                label_text = "FINAL THIRD PASS!"
+                label_x = int(frame_width * 0.35)
+                label_y = int(frame_height * 0.15)
+                
+                # Draw background rectangle for label
+                (text_width, text_height), _ = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 1.2, 3)
+                cv2.rectangle(frame, 
+                            (label_x - 10, label_y - text_height - 10), 
+                            (label_x + text_width + 10, label_y + 10), 
+                            (0, 255, 0), -1)
+                
+                # Draw text
+                cv2.putText(frame, label_text, (label_x, label_y), 
+                          cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 0), 3)
+        
+        # Count final third passes for statistics
+        team1_final_third = 0
+        team2_final_third = 0
+        if final_third_passes is not None:
+            final_third_till_frame = final_third_passes[:frame_num+1]
+            team1_final_third = sum(1 for x in final_third_till_frame if x == 1)
+            team2_final_third = sum(1 for x in final_third_till_frame if x == 2)
+            
+            # Add final third pass count to overlay if any have occurred
+            if team1_final_third > 0 or team2_final_third > 0:
+                ft_text_y = text_y2 + 30
+                cv2.putText(frame, f"Final Third Passes: T1={team1_final_third} T2={team2_final_third}",
+                          (text_x, ft_text_y), cv2.FONT_HERSHEY_SIMPLEX,
+                          font_scale * 0.9, (0, 100, 0), font_thickness)
 
         # Draw additional statistics if data is available
         if ball_acquisition is not None and player_assignment is not None and tracks is not None:

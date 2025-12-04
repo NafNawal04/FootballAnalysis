@@ -8,7 +8,7 @@ from team_assigner import TeamAssigner
 from camera_movement_estimator import CameraMovementEstimator
 from view_transformer import ViewTransformer
 from speed_and_distance_estimator import SpeedAndDistance_Estimator
-from pass_and_interception_detector import PassAndInterceptionDetector
+from pass_and_interception_detector import PassAndInterceptionDetector, FinalThirdPassDetector
 from drawers.pass_and_interceptions_drawer import PassInterceptionDrawer
 from ball_acquisition import BallAcquisitionDetector
 from ball_acquisition.improved_ball_acquisition_detector import ImprovedBallAcquisitionDetector
@@ -34,6 +34,7 @@ def main():
     parser.add_argument('--goals', action='store_true', help='Enable Goal detection')
     parser.add_argument('--possession', action='store_true', help='Enable Ball Acquisition and Possession stats')
     parser.add_argument('--passing', action='store_true', help='Enable Pass and Interception detection')
+    parser.add_argument('--final-third', action='store_true', help='Enable Final Third Pass detection')
     parser.add_argument('--network', action='store_true', help='Enable Pass Network generation')
     parser.add_argument('--tactical', action='store_true', help='Enable Tactical View')
     parser.add_argument('--camera', action='store_true', help='Enable Camera Movement overlay')
@@ -48,6 +49,7 @@ def main():
 
     # Passing and Network imply Possession, which implies Team Assignment
     if args.network: args.passing = True
+    if args.final_third: args.passing = True  # Final third detection requires passing
     if args.passing: args.possession = True
     
     # Features requiring Team Assignment
@@ -230,6 +232,33 @@ def main():
             for player_id in player_track.keys():
                 if player_id in pass_accuracy_stats:
                     tracks['players'][frame_num][player_id]['pass_accuracy'] = pass_accuracy_stats[player_id]['accuracy']
+    
+    # Final Third Pass Detection
+    final_third_passes = []
+    final_third_pass_details = {}
+    final_third_stats = {}
+    
+    if args.final_third:
+        print("Running Final Third Pass Detector...")
+        final_third_detector = FinalThirdPassDetector(view_transformer)
+        final_third_passes, final_third_pass_details = final_third_detector.detect_final_third_passes(
+            passes, ball_acquisition, player_assignment, tracks['ball'], tracks['players']
+        )
+        
+        final_third_stats = final_third_detector.get_final_third_statistics(
+            final_third_passes, player_assignment, final_third_pass_details
+        )
+        
+        print(f"\nFinal Third Pass Statistics:")
+        print(f"  - Total final third passes: {final_third_stats['total_final_third_passes']}")
+        print(f"  - Team 1: {final_third_stats['by_team'][1]}")
+        print(f"  - Team 2: {final_third_stats['by_team'][2]}")
+        if final_third_stats['by_player']:
+            print(f"  - Top players:")
+            sorted_players = sorted(final_third_stats['by_player'].items(), 
+                                   key=lambda x: x[1]['count'], reverse=True)[:5]
+            for player_id, player_stats in sorted_players:
+                print(f"    - Player {player_id} (Team {player_stats['team_id']}): {player_stats['count']} passes")
 
     # Pass Network
     if args.network:
@@ -316,7 +345,8 @@ def main():
         pass_interception_drawer = PassInterceptionDrawer()
         pass_interception_drawer.pass_accuracy_stats = pass_accuracy_stats  
         output_video_frames = pass_interception_drawer.draw(output_video_frames, passes, interceptions,
-                                                             ball_acquisition, player_assignment, tracks)
+                                                             ball_acquisition, player_assignment, tracks, 
+                                                             final_third_passes if args.final_third else None)
                                                              
     # Goals
     if args.goals and goals:
